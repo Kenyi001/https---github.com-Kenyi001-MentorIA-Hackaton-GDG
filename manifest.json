@@ -15,7 +15,9 @@
   ],
   "host_permissions": [
     "https://gemini.google.com/*",
-    "https://chat.openai.com/*"
+    "https://chat.openai.com/*",
+    "http://localhost:3001/*",
+    "https://*.pusherapp.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -34,7 +36,11 @@
         "https://gemini.google.com/*",
         "https://chat.openai.com/*"
       ],
-      "js": ["content.js"]
+      "js": [
+        "config.js",
+        "https://js.pusher.com/8.4.0/pusher.min.js",
+        "content.js"
+      ]
     }
   ]
 }

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Conexión MentorIA</title>
+  <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+  <script src="config.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #d1ecf1; color: #0c5460; }
+    button {
+      background: #EAA64D;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #C78A3B;
+    }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .dashboard-link {
+      background: #0D5EA6;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      display: inline-block;
+      margin: 10px 5px;
+    }
+    .dashboard-link:hover {
+      background: #0A4A8A;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test de Conexión MentorIA</h1>
+  
+  <div class="test-section">
+    <h2>1. Configuración</h2>
+    <div id="config-status" class="status info">Verificando configuración...</div>
+    <button onclick="testConfig()">Verificar Config</button>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Conexión Backend</h2>
+    <div id="backend-status" class="status info">Probando conexión...</div>
+    <button onclick="testBackend()">Test Backend</button>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Pusher</h2>
+    <div id="pusher-status" class="status info">Inicializando Pusher...</div>
+    <button onclick="testPusher()">Test Pusher</button>
+    <button onclick="sendTestPrompt()">Enviar Prompt Test</button>
+  </div>
+
+  <div class="test-section">
+    <h2>4. Dashboard</h2>
+    <div id="dashboard-status" class="status info">Verificando dashboard...</div>
+    <a href="http://localhost:3001/dashboard" target="_blank" class="dashboard-link">Abrir Dashboard</a>
+    <button onclick="testDashboard()">Test Dashboard</button>
+  </div>
+
+  <div class="test-section">
+    <h2>5. Logs</h2>
+    <div id="logs" class="log"></div>
+    <button onclick="clearLogs()">Limpiar Logs</button>
+  </div>
+
+  <script>
+    let pusher = null;
+    let channel = null;
+
+    function log(message, type = 'info') {
+      const logs = document.getElementById('logs');
+      const timestamp = new Date().toLocaleTimeString();
+      logs.innerHTML += `[${timestamp}] ${message}\n`;
+      logs.scrollTop = logs.scrollHeight;
+      console.log(message);
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').innerHTML = '';
+    }
+
+    function updateStatus(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.className = `status ${type}`;
+    }
+
+    function testConfig() {
+      log('🔧 Verificando configuración...');
+      
+      if (typeof MENTORIA_CONFIG !== 'undefined') {
+        log('✅ Configuración cargada correctamente');
+        log(`📡 Backend URL: ${MENTORIA_CONFIG.BACKEND.URL}`);
+        log(`🔑 Pusher Key: ${MENTORIA_CONFIG.PUSHER.KEY}`);
+        updateStatus('config-status', '✅ Configuración OK', 'success');
+      } else {
+        log('❌ Error: Configuración no encontrada');
+        updateStatus('config-status', '❌ Configuración no encontrada', 'error');
+      }
+    }
+
+    async function testBackend() {
+      log('🌐 Probando conexión con backend...');
+      
+      try {
+        const response = await fetch(`${MENTORIA_CONFIG.BACKEND.URL}/health`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          log('✅ Backend conectado correctamente');
+          log(`📊 Estado: ${data.status}`);
+          log(`👥 Usuarios conectados: ${data.users_connected}`);
+          updateStatus('backend-status', '✅ Backend conectado', 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Error conectando con backend: ${error.message}`);
+        updateStatus('backend-status', '❌ Backend no disponible', 'error');
+      }
+    }
+
+    function testPusher() {
+      log('📡 Inicializando Pusher...');
+      
+      try {
+        pusher = new Pusher(MENTORIA_CONFIG.PUSHER.KEY, {
+          cluster: MENTORIA_CONFIG.PUSHER.CLUSTER
+        });
+
+        const userId = 'test_user_' + Date.now();
+        channel = pusher.subscribe(`user-${userId}`);
+
+        channel.bind('pusher:subscription_succeeded', () => {
+          log('✅ Pusher conectado correctamente');
+          updateStatus('pusher-status', '✅ Pusher conectado', 'success');
+        });
+
+        channel.bind('pusher:subscription_error', (error) => {
+          log(`❌ Error en suscripción Pusher: ${error}`);
+          updateStatus('pusher-status', '❌ Error en Pusher', 'error');
+        });
+
+        // Escuchar eventos de prueba
+        channel.bind('test-event', (data) => {
+          log(`📨 Evento de prueba recibido: ${JSON.stringify(data)}`);
+        });
+
+        log('📡 Pusher inicializado, esperando conexión...');
+        
+      } catch (error) {
+        log(`❌ Error inicializando Pusher: ${error.message}`);
+        updateStatus('pusher-status', '❌ Error en Pusher', 'error');
+      }
+    }
+
+    async function testDashboard() {
+      log('📊 Probando conexión con dashboard...');
+      
+      try {
+        const response = await fetch('http://localhost:3001/dashboard');
+        
+        if (response.ok) {
+          log('✅ Dashboard accesible');
+          updateStatus('dashboard-status', '✅ Dashboard OK', 'success');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Error accediendo al dashboard: ${error.message}`);
+        updateStatus('dashboard-status', '❌ Dashboard no disponible', 'error');
+      }
+    }
+
+    async function sendTestPrompt() {
+      log('📝 Enviando prompt de prueba...');
+      
+      const testPrompt = "Explica el concepto de deuda cognitiva en el contexto del uso de IA";
+      
+      try {
+        const response = await fetch(`${MENTORIA_CONFIG.BACKEND.URL}/api/test/prompt`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: testPrompt,
+            userId: 'test_user_' + Date.now()
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          log('✅ Prompt de prueba enviado correctamente');
+          log(`📊 Respuesta: ${JSON.stringify(data, null, 2)}`);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Error enviando prompt de prueba: ${error.message}`);
+      }
+    }
+
+    // Auto-ejecutar tests al cargar
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        testConfig();
+        testBackend();
+        testPusher();
+        testDashboard();
+      }, 1000);
+    });
+  </script>
+</body>
+</html> 

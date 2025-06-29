@@ -83,22 +83,22 @@ function showAnalysisComplete() {
 
 // Función para abrir el dashboard
 function openDashboard() {
-  // Por ahora, abrir una página de "próximamente"
-  const dashboardUrl = 'https://mentoria-dashboard.vercel.app';
+  // Abrir el dashboard local
+  const dashboardUrl = 'http://localhost:3001/dashboard';
   
-  // Intentar abrir el dashboard
+  // Abrir el dashboard
   chrome.tabs.create({ url: dashboardUrl }, (tab) => {
-    // Si falla, mostrar mensaje de próximamente
+    // Si falla, mostrar mensaje de error
     chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo, tab) {
       if (tabId === tab.id && changeInfo.status === 'complete') {
         chrome.tabs.onUpdated.removeListener(listener);
         
         // Verificar si la página cargó correctamente
         chrome.tabs.executeScript(tab.id, {
-          code: 'document.body.innerHTML.includes("404") || document.body.innerHTML.includes("not found")'
+          code: 'document.body.innerHTML.includes("404") || document.body.innerHTML.includes("not found") || document.body.innerHTML.includes("ERR_CONNECTION_REFUSED")'
         }, (result) => {
           if (result && result[0]) {
-            // Si hay error 404, mostrar página de próximamente
+            // Si hay error, mostrar página de próximamente
             chrome.tabs.update(tab.id, {
               url: 'data:text/html;charset=utf-8,' + encodeURIComponent(`
                 <!DOCTYPE html>
@@ -106,7 +106,7 @@ function openDashboard() {
                 <head>
                   <meta charset="UTF-8">
                   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>MentorIA Dashboard - Próximamente</title>
+                  <title>MentorIA Dashboard - Error de Conexión</title>
                   <style>
                     * {
                       margin: 0;
@@ -149,37 +149,32 @@ function openDashboard() {
                       opacity: 0.9;
                     }
                     
-                    .features {
+                    .error-message {
                       background: rgba(255, 255, 255, 0.1);
                       padding: 30px;
                       border-radius: 15px;
                       margin: 30px 0;
                       backdrop-filter: blur(10px);
+                      border-left: 4px solid #A16D28;
                     }
                     
-                    .features h3 {
+                    .error-message h3 {
                       margin-bottom: 20px;
                       font-size: 24px;
+                      color: #A16D28;
                     }
                     
-                    .feature-list {
+                    .error-steps {
                       list-style: none;
                       text-align: left;
                     }
                     
-                    .feature-list li {
+                    .error-steps li {
                       margin: 10px 0;
                       padding: 10px;
                       background: rgba(255, 255, 255, 0.1);
                       border-radius: 8px;
                       border-left: 4px solid #EAA64D;
-                    }
-                    
-                    .coming-soon {
-                      background: rgba(255, 255, 255, 0.2);
-                      padding: 20px;
-                      border-radius: 10px;
-                      margin-top: 30px;
                     }
                     
                     .back-btn {
@@ -202,25 +197,18 @@ function openDashboard() {
                 </head>
                 <body>
                   <div class="container">
-                    <div class="logo">🚀</div>
-                    <h1>MentorIA Dashboard</h1>
-                    <p class="subtitle">Tu centro de control para el análisis cognitivo de prompts</p>
+                    <div class="logo">⚠️</div>
+                    <h1>Error de Conexión</h1>
+                    <p class="subtitle">No se pudo conectar al dashboard de MentorIA</p>
                     
-                    <div class="features">
-                      <h3>✨ Funcionalidades Próximas</h3>
-                      <ul class="feature-list">
-                        <li>📊 <strong>Analytics Avanzados:</strong> Métricas detalladas de tu uso de IA</li>
-                        <li>🎯 <strong>Recomendaciones Personalizadas:</strong> Sugerencias basadas en tu historial</li>
-                        <li>📈 <strong>Progreso Cognitivo:</strong> Seguimiento de tu desarrollo intelectual</li>
-                        <li>🔍 <strong>Análisis de Patrones:</strong> Identificación de tendencias en tus prompts</li>
-                        <li>🎨 <strong>Visualizaciones Interactivas:</strong> Gráficos y reportes detallados</li>
-                        <li>📱 <strong>Dashboard Móvil:</strong> Acceso desde cualquier dispositivo</li>
+                    <div class="error-message">
+                      <h3>🔧 Solución de Problemas</h3>
+                      <ul class="error-steps">
+                        <li>🚀 <strong>Inicia el servidor:</strong> Ejecuta <code>npm run dev</code> en tu backend</li>
+                        <li>🌐 <strong>Verifica la URL:</strong> El dashboard debe estar en <code>http://localhost:3000/dashboard</code></li>
+                        <li>🔍 <strong>Revisa la consola:</strong> Busca errores en la terminal del servidor</li>
+                        <li>🔄 <strong>Recarga la página:</strong> Intenta nuevamente después de iniciar el servidor</li>
                       </ul>
-                    </div>
-                    
-                    <div class="coming-soon">
-                      <h3>🚧 En Desarrollo</h3>
-                      <p>Nuestro equipo está trabajando arduamente para traerte estas funcionalidades. ¡Mantente atento a las actualizaciones!</p>
                     </div>
                     
                     <button class="back-btn" onclick="window.close()">← Volver a MentorIA</button>
@@ -702,7 +690,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       showCurrentPrompt();
     }
   }
-});
+}); 
 
 // Funciones para manejar la pantalla flotante de planes
 function showPlanModal() {

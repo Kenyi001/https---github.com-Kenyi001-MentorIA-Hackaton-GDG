@@ -18,78 +18,48 @@ let userId = generateUserId();
 let pusher = null;
 let channel = null;
 
-// Función para generar ID único de usuario
-function generateUserId() {
-  return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
-
-// Función para inicializar Pusher
+// Inicializar Pusher
 function initializePusher() {
   try {
-    // Configuración de Pusher (cambiar por tus credenciales)
-    pusher = new Pusher('tu-pusher-key', {
-      cluster: 'us2',
-      encrypted: true
+    // Configuración de Pusher desde config.js
+    pusher = new Pusher(MENTORIA_CONFIG.PUSHER.KEY, {
+      cluster: MENTORIA_CONFIG.PUSHER.CLUSTER
     });
 
     // Suscribirse al canal del usuario
+    const userId = generateUserId();
     channel = pusher.subscribe(`user-${userId}`);
 
-    // Escuchar eventos de feedback
-    channel.bind('prompt-feedback', (data) => {
-      console.log('📨 Feedback recibido de Pusher:', data);
-      handlePromptFeedback(data);
+    // Escuchar eventos del backend
+    channel.bind('prompt-feedback', function(data) {
+      console.log('Feedback recibido:', data);
+      showPoapMessage(data.feedback, 5000);
     });
 
-    // Escuchar eventos de análisis completado
-    channel.bind('analysis-complete', (data) => {
-      console.log('✅ Análisis completado:', data);
-      hidePoapMessage();
+    channel.bind('analysis-complete', function(data) {
+      console.log('Análisis completado:', data);
       showPromptEvaluation(data.evaluation);
     });
 
-    // Escuchar eventos de error
-    channel.bind('analysis-error', (data) => {
-      console.error('❌ Error en análisis:', data);
-      showPoapMessage(`❌ Error: ${data.message}`, 3000);
+    channel.bind('analysis-error', function(data) {
+      console.log('Error en análisis:', data);
+      showPoapMessage('Error en el análisis. Usando análisis local.', 3000);
     });
 
     console.log('✅ Pusher inicializado correctamente');
-    
-    // Enviar identificación del usuario al servidor
-    sendUserIdentification();
-
   } catch (error) {
     console.error('❌ Error inicializando Pusher:', error);
   }
 }
 
-// Función para enviar identificación del usuario al servidor
-function sendUserIdentification() {
-  const userData = {
-    user_id: userId,
-    user_agent: navigator.userAgent,
-    language: navigator.language,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    url: window.location.href,
-    timestamp: new Date().toISOString()
-  };
-
-  // Enviar al servidor via fetch
-  fetch('http://localhost:3000/api/user/identify', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(userData)
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log('👤 Usuario identificado en servidor:', data);
-  })
-  .catch(error => {
-    console.error('❌ Error identificando usuario:', error);
-  });
+// Generar ID único para el usuario
+function generateUserId() {
+  let userId = localStorage.getItem('mentoria_user_id');
+  if (!userId) {
+    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('mentoria_user_id', userId);
+  }
+  return userId;
 }
 
 // Función para crear y mostrar la ventana emergente POAPS
@@ -224,14 +194,14 @@ function sendPromptToServer(prompt, analysisData) {
     url: window.location.href,
     session_data: {
       session_start: sessionStorage.getItem('mentoria_session_start') || new Date().toISOString(),
-      prompts_count: capturedPrompts.length + 1,
-      average_typing_speed: calculateTypingSpeed(),
-      focus_time: calculateFocusTime()
+      typing_speed: calculateTypingSpeed(),
+      focus_time: calculateFocusTime(),
+      inactivity_duration: Date.now() - lastActivityTime
     }
   };
 
-  // Enviar al servidor via fetch
-  fetch('http://localhost:3000/api/prompt/analyze', {
+  // Enviar al backend local usando configuración
+  fetch(`${MENTORIA_CONFIG.BACKEND.URL}${MENTORIA_CONFIG.BACKEND.ENDPOINTS.PROMPT_ANALYZE}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -242,12 +212,13 @@ function sendPromptToServer(prompt, analysisData) {
   .then(data => {
     console.log('📤 Prompt enviado al servidor:', data);
     if (data.status === 'processing') {
-      updatePoapMessage('🤖 Procesando con Vertex AI...');
+      showPoapMessage('Procesando con IA avanzada...', 3000);
     }
   })
   .catch(error => {
     console.error('❌ Error enviando prompt al servidor:', error);
-    showPoapMessage('⚠️ Error de conexión con el servidor', 3000);
+    // Fallback: usar análisis local
+    showPoapMessage('Usando análisis local (servidor no disponible)', 3000);
   });
 }
 
@@ -827,10 +798,12 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     monitorTextInput();
     detectPromptSubmission();
+    initializePusher(); // Inicializar Pusher
   });
 } else {
   monitorTextInput();
   detectPromptSubmission();
+  initializePusher(); // Inicializar Pusher
 }
 
 // Escuchar mensajes del popup
