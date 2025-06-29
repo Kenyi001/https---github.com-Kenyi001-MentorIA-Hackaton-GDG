@@ -1,0 +1,24 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo circular -->
+  <circle cx="24" cy="24" r="24" fill="url(#gradient)"/>
+  
+  <!-- Icono de chat/IA -->
+  <path d="M12 16C12 13.7909 13.7909 12 16 12H32C34.2091 12 36 13.7909 36 16V28C36 30.2091 34.2091 32 32 32H24L20 36L16 32H12V16Z" fill="white" opacity="0.9"/>
+  
+  <!-- Puntos de IA -->
+  <circle cx="18" cy="20" r="2" fill="#667eea"/>
+  <circle cx="24" cy="20" r="2" fill="#667eea"/>
+  <circle cx="30" cy="20" r="2" fill="#667eea"/>
+  
+  <!-- Línea de texto -->
+  <rect x="16" y="26" width="16" height="2" rx="1" fill="#667eea"/>
+  <rect x="16" y="29" width="12" height="2" rx="1" fill="#667eea" opacity="0.7"/>
+  
+  <!-- Gradiente de fondo -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg> 
